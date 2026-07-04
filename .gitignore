@@ -1,35 +1,13 @@
-# Worker 工作目录（模板副本 + 临时工作文件，非产出）
-/scout/
-/designer/
-/builder/
-/tester/
-/seller/
-
-# 临时文件
-*.tmp
-*.bak
-*.swp
-*~
-
-# 调试脚本
-test-*.js
-debug-*.js
-scratch.*
-
-# 依赖
 node_modules/
-
-# 环境
+.next/
+out/
+synesthesia.db*
 .env
 .env.local
-
-# 构建产物
+*.tmp
+*.bak
+.claude/settings.local.json
 dist/
 build/
-
-# IDE
 .idea/
 .vscode/
-
-# Claude Code 本地配置（不跟仓库）
-.claude/settings.local.json
