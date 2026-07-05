@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ============================================================
-// Tone.js 预加载（模块级，页面加载即开始导入）
+// Tone.js preload
 // ============================================================
 let toneModule: any = null;
 let toneLoadPromise: Promise<any> | null = null;
@@ -20,7 +20,7 @@ function preloadTone() {
 }
 
 // ============================================================
-// 常量
+// Constants
 // ============================================================
 
 const COLORS = [
@@ -68,12 +68,10 @@ interface SoundParams {
   synthType: string;
   notes: string[];
   duration: number;
-  // 直觉控件
-  texture: string;     // 质感预设名
-  space: number;       // 0-100
-  breath: number;      // 0-100
-  grain: string;       // 纹理预设名
-  // 高级参数（由直觉控件自动计算）
+  texture: string;
+  space: number;
+  breath: number;
+  grain: string;
   filterType: string;
   filterFreq: number;
   reverbDecay: number;
@@ -96,7 +94,7 @@ interface VibeParams {
 }
 
 // ============================================================
-// 工具
+// Utilities
 // ============================================================
 
 function makeDefaultSound(): SoundParams { return applyIntuition({ ...baseSound() }); }
@@ -111,7 +109,6 @@ function baseSound(): SoundParams {
 }
 
 function applyIntuition(s: SoundParams): SoundParams {
-  // 质感 → synth + filter + ADSR
   const tex = TEXTURE_PRESETS[s.texture] || TEXTURE_PRESETS["温暖厚实"];
   s.synthType = tex.synthType;
   s.filterType = tex.filterType;
@@ -121,17 +118,14 @@ function applyIntuition(s: SoundParams): SoundParams {
   s.sustain = tex.sustain;
   s.release = tex.release;
 
-  // 空间 0-100
   s.reverbDecay = 0.5 + (s.space / 100) * 9.5;
   s.reverbWet = 0.1 + (s.space / 100) * 0.6;
   s.delayTime = (s.space / 100) * 0.8;
   s.delayFeedback = (s.space / 100) * 0.5;
 
-  // 呼吸 0-100
   s.lfoRate = (s.breath / 100) * 4;
   s.lfoDepth = (s.breath / 100) * 500;
 
-  // 纹理
   const gr = GRAIN_PRESETS[s.grain] || GRAIN_PRESETS["纯净"];
   s.noiseMix = gr.noiseMix;
 
@@ -155,7 +149,7 @@ function exportAll() {
 }
 
 // ============================================================
-// 音符预览
+// Note preview
 // ============================================================
 
 async function previewNote(note: string) {
@@ -168,7 +162,7 @@ async function previewNote(note: string) {
 }
 
 // ============================================================
-// 组件：音符选择器
+// Note Picker
 // ============================================================
 
 function NotePicker({ notes, onChange }: { notes: string[]; onChange: (n: string[]) => void }) {
@@ -176,24 +170,22 @@ function NotePicker({ notes, onChange }: { notes: string[]; onChange: (n: string
   const remove = (n: string) => onChange(notes.filter((x) => x !== n));
 
   return (
-    <div className="mb-4">
-      <label className="text-xs text-gray-400 mb-1 block">和弦 ({notes.length} 个音)</label>
-      {/* 已选音符 */}
+    <div className="mb-5">
+      <label className="text-xs text-warm-secondary mb-1.5 block font-sans">和弦 ({notes.length} 个音)</label>
       <div className="flex flex-wrap gap-1 mb-2">
-        {notes.length === 0 && <span className="text-xs text-gray-600">点击下方音符添加</span>}
+        {notes.length === 0 && <span className="text-xs text-warm-secondary/40">点击下方音符添加</span>}
         {notes.map((n) => (
-          <span key={n} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+          <span key={n} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-md bg-coral/10 text-coral border border-coral/20 font-mono">
             {n}
-            <button onClick={() => remove(n)} className="text-gray-500 hover:text-red-400 leading-none">×</button>
+            <button onClick={() => remove(n)} className="text-warm-secondary/50 hover:text-coral leading-none">&times;</button>
           </span>
         ))}
       </div>
 
-      {/* 音符网格（带试听按钮） */}
       <div className="space-y-1">
         {NOTE_ROWS.map((row) => (
           <div key={row.label} className="flex items-center gap-1">
-            <span className="text-[10px] text-gray-600 w-8 shrink-0">{row.label}</span>
+            <span className="text-[10px] text-warm-secondary/40 w-8 shrink-0 font-sans">{row.label}</span>
             {row.notes.map((n) => {
               const selected = notes.includes(n);
               return (
@@ -201,11 +193,11 @@ function NotePicker({ notes, onChange }: { notes: string[]; onChange: (n: string
                   key={n}
                   onClick={() => selected ? remove(n) : add(n)}
                   onContextMenu={(e) => { e.preventDefault(); previewNote(n); }}
-                  title={`点击: ${selected ? "移除" : "添加"} / 长按: 试听`}
-                  className={`w-8 h-8 md:w-9 md:h-7 text-[10px] rounded font-mono transition-all ${
+                  title={`点击: ${selected ? "移除" : "添加"} / 右键: 试听`}
+                  className={`w-8 h-8 md:w-9 md:h-7 text-[10px] rounded font-mono transition-all duration-200 ${
                     selected
-                      ? "bg-cyan-500 text-white ring-1 ring-cyan-400"
-                      : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
+                      ? "bg-warm-text text-warm-bg"
+                      : "bg-warm-surface text-warm-secondary/60 hover:bg-warm-border hover:text-warm-text"
                   }`}
                 >{n.replace(/\d/,"")}</button>
               );
@@ -213,13 +205,13 @@ function NotePicker({ notes, onChange }: { notes: string[]; onChange: (n: string
           </div>
         ))}
       </div>
-      <p className="text-[10px] text-gray-600 mt-1">点击添加/移除 · 长按试听</p>
+      <p className="text-[10px] text-warm-secondary/40 mt-1.5 font-sans">点击添加/移除 · 右键试听</p>
     </div>
   );
 }
 
 // ============================================================
-// 组件：直觉式参数面板
+// Intuition Panel
 // ============================================================
 
 function IntuitionPanel({ sound, onChange }: { sound: SoundParams; onChange: (s: SoundParams) => void }) {
@@ -233,104 +225,104 @@ function IntuitionPanel({ sound, onChange }: { sound: SoundParams; onChange: (s:
   const grainNames = Object.keys(GRAIN_PRESETS);
 
   return (
-    <div className="space-y-5">
-      {/* 质感 */}
+    <div className="space-y-6">
+      {/* Texture */}
       <div>
-        <label className="text-xs text-gray-400 block mb-1.5">🎵 质感 — 声音的性格</label>
+        <label className="text-xs text-warm-secondary block mb-2 font-sans">质感 — 声音的性格</label>
         <div className="grid grid-cols-2 gap-1.5">
           {texNames.map((t) => (
             <button key={t} onClick={() => update({ texture: t })}
-              className={`text-left px-3 py-2 rounded-lg text-xs border transition-all ${
+              className={`text-left px-3 py-2.5 rounded-lg text-xs border transition-all duration-200 ${
                 sound.texture === t
-                  ? "bg-cyan-500/10 border-cyan-400/40 text-cyan-200"
-                  : "bg-gray-800/50 border-gray-700/30 text-gray-400 hover:border-gray-500"
+                  ? "bg-coral/5 border-coral/30 text-coral"
+                  : "bg-warm-surface/50 border-warm-border text-warm-secondary hover:border-warm-border-strong"
               }`}>
-              <div className="font-medium">{t}</div>
-              <div className="text-[10px] opacity-60 mt-0.5">{TEXTURE_PRESETS[t].desc}</div>
+              <div className="font-medium font-serif text-sm">{t}</div>
+              <div className="text-[10px] opacity-60 mt-0.5 font-sans">{TEXTURE_PRESETS[t].desc}</div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* 空间 */}
+      {/* Space */}
       <div>
-        <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">🌌 空间 — 声音在哪里</span>
-          <span className="text-cyan-400">{sound.space <= 20 ? "近在耳边" : sound.space <= 50 ? "房间内" : sound.space <= 80 ? "大厅里" : "空旷深远"}</span>
+        <div className="flex justify-between text-xs mb-1.5 font-sans">
+          <span className="text-warm-secondary">空间 — 声音在哪里</span>
+          <span className="text-coral">{sound.space <= 20 ? "近在耳边" : sound.space <= 50 ? "房间内" : sound.space <= 80 ? "大厅里" : "空旷深远"}</span>
         </div>
         <input type="range" min={0} max={100} value={sound.space}
           onChange={(e) => update({ space: parseInt(e.target.value) })}
-          className="w-full h-1.5 rounded-full bg-gray-700 accent-cyan-400 cursor-pointer" />
-        <div className="flex justify-between text-[10px] text-gray-600 mt-0.5"><span>耳边</span><span>深远</span></div>
+          className="w-full h-1.5 rounded-full bg-warm-border accent-coral cursor-pointer" />
+        <div className="flex justify-between text-[10px] text-warm-secondary/40 mt-0.5 font-sans"><span>耳边</span><span>深远</span></div>
       </div>
 
-      {/* 呼吸 */}
+      {/* Breath */}
       <div>
-        <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">🫁 呼吸 — 声音的波动</span>
-          <span className="text-cyan-400">{sound.breath <= 15 ? "静止" : sound.breath <= 40 ? "微微起伏" : sound.breath <= 70 ? "明显波动" : "剧烈振荡"}</span>
+        <div className="flex justify-between text-xs mb-1.5 font-sans">
+          <span className="text-warm-secondary">呼吸 — 声音的波动</span>
+          <span className="text-coral">{sound.breath <= 15 ? "静止" : sound.breath <= 40 ? "微微起伏" : sound.breath <= 70 ? "明显波动" : "剧烈振荡"}</span>
         </div>
         <input type="range" min={0} max={100} value={sound.breath}
           onChange={(e) => update({ breath: parseInt(e.target.value) })}
-          className="w-full h-1.5 rounded-full bg-gray-700 accent-cyan-400 cursor-pointer" />
-        <div className="flex justify-between text-[10px] text-gray-600 mt-0.5"><span>静止</span><span>波动</span></div>
+          className="w-full h-1.5 rounded-full bg-warm-border accent-coral cursor-pointer" />
+        <div className="flex justify-between text-[10px] text-warm-secondary/40 mt-0.5 font-sans"><span>静止</span><span>波动</span></div>
       </div>
 
-      {/* 纹理 */}
+      {/* Grain */}
       <div>
-        <label className="text-xs text-gray-400 block mb-1.5">🪨 纹理 — 声音的表面质感</label>
+        <label className="text-xs text-warm-secondary block mb-2 font-sans">纹理 — 声音的表面质感</label>
         <div className="grid grid-cols-2 gap-1.5">
           {grainNames.map((g) => (
             <button key={g} onClick={() => update({ grain: g })}
-              className={`text-left px-3 py-2 rounded-lg text-xs border transition-all ${
+              className={`text-left px-3 py-2.5 rounded-lg text-xs border transition-all duration-200 ${
                 sound.grain === g
-                  ? "bg-purple-500/10 border-purple-400/40 text-purple-200"
-                  : "bg-gray-800/50 border-gray-700/30 text-gray-400 hover:border-gray-500"
+                  ? "bg-coral/5 border-coral/30 text-coral"
+                  : "bg-warm-surface/50 border-warm-border text-warm-secondary hover:border-warm-border-strong"
               }`}>
-              <div className="font-medium">{g}</div>
-              <div className="text-[10px] opacity-60 mt-0.5">{GRAIN_PRESETS[g].desc}</div>
+              <div className="font-medium font-serif text-sm">{g}</div>
+              <div className="text-[10px] opacity-60 mt-0.5 font-sans">{GRAIN_PRESETS[g].desc}</div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* 时长 */}
+      {/* Duration */}
       <div>
-        <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">⏱ 持续时长</span>
-          <span className="text-cyan-400">{sound.duration.toFixed(1)} 秒</span>
+        <div className="flex justify-between text-xs mb-1.5 font-sans">
+          <span className="text-warm-secondary">持续时长</span>
+          <span className="text-coral">{sound.duration.toFixed(1)} 秒</span>
         </div>
         <input type="range" min={1} max={15} step={0.5} value={sound.duration}
           onChange={(e) => update({ duration: parseFloat(e.target.value) })}
-          className="w-full h-1.5 rounded-full bg-gray-700 accent-cyan-400 cursor-pointer" />
+          className="w-full h-1.5 rounded-full bg-warm-border accent-coral cursor-pointer" />
       </div>
 
-      {/* 高级折叠 */}
-      <div className="border-t border-gray-800 pt-3">
+      {/* Advanced */}
+      <div className="border-t border-warm-border pt-4">
         <button onClick={() => setAdvanced(!advanced)}
-          className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">
-          {advanced ? "▼" : "▶"} 高级参数
+          className="text-xs text-warm-secondary/50 hover:text-warm-secondary font-sans flex items-center gap-1 transition-colors duration-200">
+          {advanced ? "收起" : "展开"} 高级参数
         </button>
         {advanced && (
-          <div className="mt-2 space-y-2 p-3 rounded-lg bg-gray-900/50">
-            <div className="grid grid-cols-2 gap-2">
+          <div className="mt-3 space-y-3 p-4 rounded-lg bg-warm-surface/50">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-gray-500">合成器</label>
+                <label className="text-[10px] text-warm-secondary/50 font-sans">合成器</label>
                 <select value={sound.synthType} onChange={(e) => update({ synthType: e.target.value })}
-                  className="w-full mt-0.5 px-2 py-1 text-xs rounded bg-gray-800 border border-gray-700 text-gray-300">
+                  className="w-full mt-0.5 px-2 py-1.5 text-xs rounded-md bg-warm-bg border border-warm-border text-warm-text font-sans focus:outline-none focus:border-coral/30">
                   {["AMSynth","FMSynth","Synth","PluckSynth"].map(t => <option key={t}>{t}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] text-gray-500">滤波器</label>
+                <label className="text-[10px] text-warm-secondary/50 font-sans">滤波器</label>
                 <select value={sound.filterType} onChange={(e) => update({ filterType: e.target.value })}
-                  className="w-full mt-0.5 px-2 py-1 text-xs rounded bg-gray-800 border border-gray-700 text-gray-300">
+                  className="w-full mt-0.5 px-2 py-1.5 text-xs rounded-md bg-warm-bg border border-warm-border text-warm-text font-sans focus:outline-none focus:border-coral/30">
                   {["lowpass","highpass","bandpass","notch"].map(t => <option key={t}>{t}</option>)}
                 </select>
               </div>
             </div>
             <Slider label="滤波频率" value={sound.filterFreq} min={50} max={4000} step={10} unit="Hz" onChange={(v) => update({ filterFreq: v })} />
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-4 gap-2">
               <MiniSlider label="Attack" value={sound.attack} min={0.01} max={3} step={0.01} onChange={(v) => update({ attack: v })} />
               <MiniSlider label="Decay" value={sound.decay} min={0.01} max={2} step={0.01} onChange={(v) => update({ decay: v })} />
               <MiniSlider label="Sustain" value={sound.sustain} min={0} max={1} step={0.01} onChange={(v) => update({ sustain: v })} />
@@ -345,10 +337,10 @@ function IntuitionPanel({ sound, onChange }: { sound: SoundParams; onChange: (s:
 
 function Slider({ label, value, min, max, step = 0.01, unit = "", onChange }: { label: string; value: number; min: number; max: number; step?: number; unit?: string; onChange: (v: number) => void }) {
   return (
-    <div className="mb-1">
-      <div className="flex justify-between text-[10px] text-gray-500"><span>{label}</span><span className="text-gray-400">{value}{unit}</span></div>
+    <div>
+      <div className="flex justify-between text-[10px] text-warm-secondary/50 font-sans"><span>{label}</span><span className="text-warm-secondary">{value}{unit}</span></div>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-1 rounded bg-gray-700 accent-cyan-400 cursor-pointer" />
+        className="w-full h-1 rounded bg-warm-border accent-coral cursor-pointer" />
     </div>
   );
 }
@@ -356,90 +348,85 @@ function Slider({ label, value, min, max, step = 0.01, unit = "", onChange }: { 
 function MiniSlider({ label, value, min, max, step, onChange }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void }) {
   return (
     <div>
-      <div className="text-[9px] text-gray-600">{label}</div>
+      <div className="text-[9px] text-warm-secondary/40 font-sans">{label}</div>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-1 rounded bg-gray-700 accent-cyan-400 cursor-pointer" />
-      <div className="text-[9px] text-gray-500 text-right">{value}</div>
+        className="w-full h-1 rounded bg-warm-border accent-coral cursor-pointer" />
+      <div className="text-[9px] text-warm-secondary/50 text-right font-mono">{value}</div>
     </div>
   );
 }
 
 // ============================================================
-// 振动编辑器
+// Vibe Editor
 // ============================================================
 
 function VibeEditor({ vibe, onChange }: { vibe: VibeParams; onChange: (v: VibeParams) => void }) {
   const totalMs = vibe.pattern.reduce((a, b) => a + b, 0);
-
-  const setPreset = (name: string) => {
-    const p = VIBE_PRESETS[name];
-    if (p) onChange({ ...vibe, pattern: [...p.pattern], preset: name, label: name + "的触感" });
-  };
 
   const cyclePreset = (name: string, cycles: number) => {
     const p = VIBE_PRESETS[name];
     if (!p) return;
     const pat: number[] = [];
     for (let i = 0; i < cycles; i++) pat.push(...p.pattern);
-    onChange({ ...vibe, pattern: pat, preset: name, label: `${name}的触感 ×${cycles}` });
+    onChange({ ...vibe, pattern: pat, preset: name, label: `${name}的触感 x${cycles}` });
   };
 
   return (
     <div>
-      {/* 触感预设 */}
-      <div className="mb-3">
-        <label className="text-xs text-gray-400 block mb-1">📳 触感预设</label>
+      {/* Vibe presets */}
+      <div className="mb-4">
+        <label className="text-xs text-warm-secondary block mb-2 font-sans">触感预设</label>
         <div className="grid grid-cols-2 gap-1">
           {Object.entries(VIBE_PRESETS).map(([name, preset]) => (
             <button key={name} onClick={() => cyclePreset(name, 4)}
-              className={`text-left px-2 py-1.5 rounded text-xs border transition-all ${
+              className={`text-left px-3 py-2 rounded-lg text-xs border transition-all duration-200 ${
                 vibe.preset === name
-                  ? "bg-cyan-500/10 border-cyan-400/40 text-cyan-200"
-                  : "bg-gray-800/50 border-gray-700/30 text-gray-400 hover:border-gray-500"
+                  ? "bg-coral/5 border-coral/30 text-coral"
+                  : "bg-warm-surface/50 border-warm-border text-warm-secondary hover:border-warm-border-strong"
               }`}>
-              <div className="font-medium">{name}</div>
-              <div className="text-[10px] opacity-60">{preset.desc}</div>
+              <div className="font-medium font-serif text-sm">{name}</div>
+              <div className="text-[10px] opacity-60 mt-0.5 font-sans">{preset.desc}</div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* 可视化条形图 */}
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] text-gray-500">总长 {(totalMs / 1000).toFixed(1)}s</span>
+      {/* Visualizer */}
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] text-warm-secondary/50 font-sans">总长 {(totalMs / 1000).toFixed(1)}s</span>
       </div>
-      <div className="flex items-end gap-px h-10 mb-2 overflow-x-auto rounded bg-gray-900/50 p-1">
+      <div className="flex items-end gap-px h-10 mb-3 overflow-x-auto rounded bg-warm-surface/50 p-1">
         {vibe.pattern.map((v, i) => {
           const isOn = i % 2 === 0;
           const height = Math.max(3, (v / Math.max(...vibe.pattern, 1)) * 100);
           return (
             <div key={i} title={`${isOn?"振":"停"} ${v}ms`}
               style={{ height: `${height}%`, width: `${Math.max(3, v / 15)}px` }}
-              className={`rounded-sm flex-shrink-0 ${isOn ? "bg-cyan-400" : "bg-gray-700"}`} />
+              className={`rounded-sm flex-shrink-0 ${isOn ? "bg-coral" : "bg-warm-border"}`} />
           );
         })}
       </div>
 
-      {/* 手动微调 */}
-      <details className="mt-2">
-        <summary className="text-[10px] text-gray-500 cursor-pointer hover:text-gray-300">手动微调</summary>
-        <div className="mt-1 flex flex-wrap gap-1">
+      {/* Manual edit */}
+      <details className="mt-3">
+        <summary className="text-[10px] text-warm-secondary/40 cursor-pointer hover:text-warm-secondary font-sans transition-colors duration-200">手动微调</summary>
+        <div className="mt-2 flex flex-wrap gap-1">
           {vibe.pattern.map((v, i) => (
             <div key={i} className="flex items-center gap-0.5">
-              <span className="text-[9px] text-gray-600">{i % 2 === 0 ? "振" : "停"}</span>
+              <span className="text-[9px] text-warm-secondary/40 font-sans">{i % 2 === 0 ? "振" : "停"}</span>
               <input type="number" min={5} max={2000} value={v}
                 onChange={(e) => { const p = [...vibe.pattern]; p[i] = Math.max(5, parseInt(e.target.value) || 50); onChange({ ...vibe, pattern: p, preset: "自定义" }); }}
-                className="w-11 px-1 py-0.5 text-[10px] rounded bg-gray-800 border border-gray-700 text-gray-200 text-center" />
+                className="w-12 px-1 py-0.5 text-[10px] rounded bg-warm-bg border border-warm-border text-warm-text text-center font-mono focus:outline-none focus:border-coral/30" />
             </div>
           ))}
         </div>
       </details>
 
-      {/* 标签 */}
-      <div className="mt-2">
+      {/* Label */}
+      <div className="mt-3">
         <input type="text" value={vibe.label}
           onChange={(e) => onChange({ ...vibe, label: e.target.value })}
-          className="w-full px-2 py-1 text-xs rounded bg-gray-800 border border-gray-700 text-gray-200"
+          className="w-full px-3 py-1.5 text-xs rounded-md bg-warm-bg border border-warm-border text-warm-text font-sans focus:outline-none focus:border-coral/30 transition-colors duration-200"
           placeholder="触感标签" />
       </div>
     </div>
@@ -447,11 +434,7 @@ function VibeEditor({ vibe, onChange }: { vibe: VibeParams; onChange: (v: VibePa
 }
 
 // ============================================================
-// 主页面
-// ============================================================
-
-// ============================================================
-// 子组件：音频引导覆盖层（移动端 AudioContext 必须在用户手势中启动）
+// Audio Gate overlay
 // ============================================================
 
 function AudioGate({ onReady }: { onReady: () => void }) {
@@ -474,36 +457,33 @@ function AudioGate({ onReady }: { onReady: () => void }) {
   return (
     <div
       onClick={handleTap}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-950/95 backdrop-blur-sm cursor-pointer"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-warm-bg/95 backdrop-blur-sm cursor-pointer"
     >
       <div className="text-center px-6 max-w-sm">
-        <div className="text-6xl mb-6 animate-bounce">🎧</div>
-        <h2 className="text-2xl font-bold text-cyan-400 mb-3">
+        <div className="text-8xl mb-8 text-warm-text/10 select-none">&#9835;</div>
+        <h2 className="font-serif text-2xl text-warm-text mb-4">
           点击任意位置开始
         </h2>
-        <p className="text-gray-400 leading-relaxed mb-4">
-          你的浏览器需要一次点击来激活声音。
-          <br />
+        <p className="text-warm-secondary leading-relaxed mb-8 max-w-xs mx-auto font-sans">
+          浏览器需要一次点击来激活声音。
           点一下就好，之后就能试听和预览了。
         </p>
-        <div className="mt-6">
-          <span
-            className={`inline-block px-6 py-3 rounded-full text-lg font-semibold transition-all ${
-              loading
-                ? "bg-gray-700 text-gray-400"
-                : "bg-cyan-500 text-white animate-pulse"
-            }`}
-          >
-            {loading ? "⏳ 正在初始化..." : "👆 点击这里"}
-          </span>
-        </div>
+        <span
+          className={`inline-block px-8 py-3 rounded-lg font-serif text-lg transition-all duration-200 ${
+            loading
+              ? "bg-warm-surface text-warm-secondary"
+              : "bg-warm-text text-warm-bg hover:opacity-85"
+          }`}
+        >
+          {loading ? "正在初始化..." : "点我开始"}
+        </span>
       </div>
     </div>
   );
 }
 
 // ============================================================
-// 主页面
+// Main Studio Page
 // ============================================================
 
 export default function StudioPage() {
@@ -520,7 +500,7 @@ export default function StudioPage() {
 
   const colorInfo = COLORS.find((c) => c.slug === activeColor)!;
 
-  // 加载预设
+  // Load preset
   useEffect(() => {
     const preset = loadPreset(activeColor);
     if (preset) {
@@ -551,7 +531,6 @@ export default function StudioPage() {
               ns.decay = sc.envelope?.decay || 0.3;
               ns.sustain = sc.envelope?.sustain || 0.7;
               ns.release = sc.envelope?.release || 2;
-              // 反推直觉值
               ns.space = Math.round((ns.reverbWet - 0.1) / 0.6 * 100);
               ns.breath = Math.round((ns.lfoRate / 4) * 100);
               ns.texture = "温暖厚实";
@@ -564,7 +543,7 @@ export default function StudioPage() {
     }
   }, [activeColor]);
 
-  // 播放预览
+  // Play preview
   const play = useCallback(async () => {
     if (playing) return;
     setPlaying(true);
@@ -597,82 +576,87 @@ export default function StudioPage() {
 
   return (
     <>
-      {/* 移动端音频引导覆盖层 */}
       {!audioReady && <AudioGate onReady={() => setAudioReady(true)} />}
 
-      <div className="min-h-screen bg-gray-950 text-gray-200">
-        <header className="border-b border-gray-800 px-2 md:px-4 py-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 shrink-0">
-            <h1 className="text-sm md:text-base font-bold text-cyan-400">🎛 Studio</h1>
-          {savedMsg && <span className="text-xs text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded hidden md:inline">{savedMsg}</span>}
-        </div>
-        <div className="flex items-center gap-1">
-          {savedMsg && <span className="text-[10px] text-green-400 md:hidden">{savedMsg}</span>}
-          <button onClick={save} className="px-2 md:px-3 py-1 text-[11px] md:text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium whitespace-nowrap">💾</button>
-          <button onClick={exportJson} className="px-2 md:px-3 py-1 text-[11px] md:text-xs rounded bg-purple-600 hover:bg-purple-500 text-white font-medium whitespace-nowrap">📥</button>
-          <a href="/" className="px-2 py-1 text-[11px] md:text-xs rounded bg-gray-800 hover:bg-gray-700 text-gray-400 whitespace-nowrap">←</a>
-        </div>
-      </header>
+      <div className="min-h-screen bg-warm-bg text-warm-text">
+        {/* Header */}
+        <header className="border-b border-warm-border px-3 md:px-5 py-2.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 shrink-0">
+            <h1 className="font-serif text-base md:text-lg text-warm-text">
+              Studio
+            </h1>
+            {savedMsg && <span className="text-xs text-coral font-sans hidden md:inline">{savedMsg}</span>}
+          </div>
+          <div className="flex items-center gap-1.5">
+            {savedMsg && <span className="text-[10px] text-coral md:hidden font-sans">{savedMsg}</span>}
+            <button onClick={save} className="px-3 py-1.5 text-xs rounded-md bg-warm-text text-warm-bg hover:opacity-85 font-serif whitespace-nowrap transition-opacity duration-200">保存</button>
+            <button onClick={exportJson} className="px-3 py-1.5 text-xs rounded-md border border-warm-border text-warm-text hover:bg-warm-surface font-serif whitespace-nowrap transition-colors duration-200">导出</button>
+            <a href="/" className="px-3 py-1.5 text-xs rounded-md text-warm-secondary hover:text-warm-text font-serif whitespace-nowrap transition-colors duration-200">&larr;</a>
+          </div>
+        </header>
 
-      {/* 颜色选择器：手机横向滚动，桌面左侧竖排 */}
-      <div className="md:flex">
-        <aside className="
-          flex flex-row md:flex-col items-center gap-1.5 py-2 px-2
-          border-b md:border-b-0 md:border-r border-gray-800 bg-gray-900
-          overflow-x-auto md:overflow-y-auto shrink-0
-          md:w-14
-        ">
-          {COLORS.map((c) => (
-            <button key={c.slug} onClick={() => setActiveColor(c.slug)}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition-all relative shrink-0"
-              style={{ backgroundColor: c.hex, boxShadow: activeColor === c.slug ? `0 0 10px ${c.hex}80` : "none", opacity: activeColor === c.slug ? 1 : 0.6 }}>
-              <span className="mix-blend-difference text-white">{c.name[0]}</span>
-              {mounted && loadPreset(c.slug) && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-green-400" />}
-            </button>
-          ))}
-        </aside>
-
-        {/* 手机端：音景/振动 Tab 切换 */}
-        <div className="md:hidden flex border-b border-gray-800 bg-gray-900/80">
-          <button onClick={() => setMobileTab("sound")}
-            className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${mobileTab === "sound" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-gray-500"}`}>
-            🎵 音景
-          </button>
-          <button onClick={() => setMobileTab("vibe")}
-            className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${mobileTab === "vibe" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-gray-500"}`}>
-            📳 振动
-          </button>
-        </div>
-
-        {/* 编辑区：桌面并排，手机按 Tab 切换 */}
-        <div className="flex-1 flex flex-col md:flex-row md:h-[calc(100vh-97px)] overflow-hidden">
-          <main className={`flex-1 overflow-y-auto p-3 md:p-4 ${mobileTab === "vibe" ? "hidden md:block" : ""}`}>
-            <div className="max-w-md mx-auto">
-              <h2 className="text-lg font-bold mb-3" style={{ color: colorInfo.hex }}>{colorInfo.name}</h2>
-              <NotePicker notes={sound.notes} onChange={(notes) => setSound(applyIntuition({ ...sound, notes }))} />
-              <IntuitionPanel sound={sound} onChange={setSound} />
-              <div className="h-16 md:h-4" />
-            </div>
-          </main>
-
-          <aside className={`w-full md:w-72 border-t md:border-t-0 md:border-l border-gray-800 overflow-y-auto p-3 bg-gray-900/50 shrink-0 ${mobileTab === "sound" ? "hidden md:block" : ""}`}>
-            <VibeEditor vibe={vibe} onChange={setVibe} />
-            <div className="h-16 md:h-4" />
+        {/* Color selector */}
+        <div className="md:flex">
+          <aside className="
+            flex flex-row md:flex-col items-center gap-1.5 py-2.5 px-2
+            border-b md:border-b-0 md:border-r border-warm-border bg-warm-surface/30
+            overflow-x-auto md:overflow-y-auto shrink-0 md:w-14
+          ">
+            {COLORS.map((c) => (
+              <button key={c.slug} onClick={() => setActiveColor(c.slug)}
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-200 relative shrink-0"
+                style={{
+                  backgroundColor: c.hex,
+                  boxShadow: activeColor === c.slug ? `0 0 12px ${c.hex}60` : "none",
+                  opacity: activeColor === c.slug ? 1 : 0.55,
+                }}>
+                <span className="mix-blend-difference text-white font-serif">{c.name[0]}</span>
+                {mounted && loadPreset(c.slug) && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-coral" />}
+              </button>
+            ))}
           </aside>
+
+          {/* Mobile tabs */}
+          <div className="md:hidden flex border-b border-warm-border">
+            <button onClick={() => setMobileTab("sound")}
+              className={`flex-1 py-2.5 text-xs font-serif text-center transition-colors duration-200 ${mobileTab === "sound" ? "text-warm-text border-b-2 border-coral" : "text-warm-secondary"}`}>
+              音景
+            </button>
+            <button onClick={() => setMobileTab("vibe")}
+              className={`flex-1 py-2.5 text-xs font-serif text-center transition-colors duration-200 ${mobileTab === "vibe" ? "text-warm-text border-b-2 border-coral" : "text-warm-secondary"}`}>
+              振动
+            </button>
+          </div>
+
+          {/* Editor area */}
+          <div className="flex-1 flex flex-col md:flex-row md:h-[calc(100vh-97px)] overflow-hidden">
+            <main className={`flex-1 overflow-y-auto p-4 md:p-5 ${mobileTab === "vibe" ? "hidden md:block" : ""}`}>
+              <div className="max-w-lg mx-auto">
+                <h2 className="font-serif text-xl mb-4" style={{ color: colorInfo.hex }}>{colorInfo.name}</h2>
+                <NotePicker notes={sound.notes} onChange={(notes) => setSound(applyIntuition({ ...sound, notes }))} />
+                <IntuitionPanel sound={sound} onChange={setSound} />
+                <div className="h-16 md:h-4" />
+              </div>
+            </main>
+
+            <aside className={`w-full md:w-80 border-t md:border-t-0 md:border-l border-warm-border overflow-y-auto p-4 bg-warm-surface/20 shrink-0 ${mobileTab === "sound" ? "hidden md:block" : ""}`}>
+              <VibeEditor vibe={vibe} onChange={setVibe} />
+              <div className="h-16 md:h-4" />
+            </aside>
+          </div>
+        </div>
+
+        {/* Play bar */}
+        <div className="fixed bottom-0 left-0 md:left-14 right-0 border-t border-warm-border bg-warm-bg/95 backdrop-blur px-4 py-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-center gap-3">
+          <button onClick={play} disabled={playing}
+            className={`px-12 py-3 rounded-lg font-serif text-base transition-all duration-200 flex-1 md:flex-none ${
+              playing ? "bg-warm-surface text-warm-secondary cursor-wait" : "text-white hover:opacity-90 active:scale-[0.98]"
+            }`}
+            style={{ backgroundColor: playing ? undefined : colorInfo.hex }}>
+            {playing ? "播放中..." : "预览"}
+          </button>
         </div>
       </div>
-
-      {/* 底部播放：桌面跟在颜色栏后，手机全宽 + safe-area */}
-      <div className="fixed bottom-0 left-0 md:left-14 right-0 border-t border-gray-800 bg-gray-900/95 backdrop-blur px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-center gap-3">
-        <button onClick={play} disabled={playing}
-          className={`px-10 py-2.5 rounded-full text-base font-bold transition-all flex-1 md:flex-none ${
-            playing ? "bg-gray-700 text-gray-400 animate-pulse cursor-wait" : "text-white hover:scale-105 active:scale-95 shadow-lg"
-          }`}
-          style={{ backgroundColor: playing ? undefined : colorInfo.hex }}>
-          {playing ? "🔊 播放中..." : "▶ 预览"}
-        </button>
-      </div>
-    </div>
     </>
   );
 }
