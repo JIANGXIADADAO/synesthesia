@@ -226,9 +226,10 @@ function AudioGate({
   hasVibration: boolean;
 }) {
   const [loading, setLoading] = useState(false);
-  const isIOS =
-    typeof navigator !== "undefined" &&
-    /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const [isIOS, setIsIOS] = useState(false);
+  useEffect(() => {
+    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
+  }, []);
 
   const handleTap = async () => {
     setLoading(true);
@@ -391,12 +392,14 @@ export default function Home() {
     recognitionRef.current = recognition;
   }, [colors]);
 
-  // 振动支持检测
+  // 振动支持检测（SSR 安全：延迟到客户端 useEffect 再读 navigator）
   const [visualVibe, setVisualVibe] = useState(false);
-  const hasVibration = typeof navigator !== "undefined" && !!navigator.vibrate;
-  const isIOS =
-    typeof navigator !== "undefined" &&
-    /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const [hasVibration, setHasVibration] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  useEffect(() => {
+    setHasVibration(!!navigator.vibrate);
+    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
+  }, []);
 
   // 感受这个颜色
   const feelColor = (sensory: SensoryData) => {
