@@ -9,6 +9,28 @@ npm install && npm run db:seed && npm run dev
 # → http://localhost:3457（主页）/ http://localhost:3457/studio（声音编辑器）
 ```
 
+<!-- CUB:RESUME -->
+## 断点：2026-07-04
+
+**当前状态**：
+- ✅ Windows 桌面版 Web 完整体验成功（音景 + 视觉脉动）
+- ❌ 手机版无法播放声音、无法触发振动
+
+**下一步**：
+1. 排查手机端 Tone.js 无法播放的原因（Tone.start() 需要用户手势、iOS AudioContext 限制、Tone.js 懒加载时序）
+2. 排查手机端振动不触发（navigator.vibrate 在 iOS Safari 不支持，Android Chrome 需要 HTTPS）
+3. 可能的修复方向：
+   - 在第一个用户点击时预初始化 AudioContext（Tone.start() 绑定到点击事件）
+   - iOS 需要静音开关关闭 + 非静音模式
+   - 振动作降级提示（iOS 完全不支持 vibration API）
+   - 考虑在页面加载时显示"点击任意位置开始"引导页，用这个点击来启动 Tone.js
+4. Studio 页面手机端编辑/试听体验优化
+5. 首页语音搜索在手机端的兼容性测试
+
+**已部署**：https://synesthesia-jiangxia.netlify.app/
+**GitHub**：https://github.com/JIANGXIADADAO/synesthesia
+<!-- /CUB:RESUME -->
+
 ## 项目状态
 
 | 组件 | 状态 | 说明 |

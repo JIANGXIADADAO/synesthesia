@@ -3,6 +3,23 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ============================================================
+// Tone.js 预加载（模块级，页面加载即开始导入）
+// ============================================================
+let toneModule: any = null;
+let toneLoadPromise: Promise<any> | null = null;
+let toneReady = false;
+
+function preloadTone() {
+  if (!toneLoadPromise) {
+    toneLoadPromise = import("tone").then((m) => {
+      toneModule = m;
+      return m;
+    });
+  }
+  return toneLoadPromise;
+}
+
+// ============================================================
 // 常量
 // ============================================================
 
@@ -141,11 +158,10 @@ function exportAll() {
 // 音符预览
 // ============================================================
 
-let _noteTone: any = null;
 async function previewNote(note: string) {
-  if (!_noteTone) { _noteTone = await import("tone"); }
-  const Tone = _noteTone;
-  await Tone.start();
+  if (!toneModule) await preloadTone();
+  const Tone = toneModule;
+  if (!toneReady) { await Tone.start(); toneReady = true; }
   const synth = new Tone.Synth({ envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 0.8 }, volume: -8 }).toDestination();
   synth.triggerAttackRelease(note, "8n");
   setTimeout(() => synth.dispose(), 1500);
@@ -434,6 +450,62 @@ function VibeEditor({ vibe, onChange }: { vibe: VibeParams; onChange: (v: VibePa
 // 主页面
 // ============================================================
 
+// ============================================================
+// 子组件：音频引导覆盖层（移动端 AudioContext 必须在用户手势中启动）
+// ============================================================
+
+function AudioGate({ onReady }: { onReady: () => void }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleTap = async () => {
+    setLoading(true);
+    try {
+      if (!toneModule) await preloadTone();
+      await toneModule.start();
+      toneReady = true;
+      onReady();
+    } catch (e) {
+      console.error("AudioGate init failed:", e);
+      onReady();
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div
+      onClick={handleTap}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-950/95 backdrop-blur-sm cursor-pointer"
+    >
+      <div className="text-center px-6 max-w-sm">
+        <div className="text-6xl mb-6 animate-bounce">🎧</div>
+        <h2 className="text-2xl font-bold text-cyan-400 mb-3">
+          点击任意位置开始
+        </h2>
+        <p className="text-gray-400 leading-relaxed mb-4">
+          你的浏览器需要一次点击来激活声音。
+          <br />
+          点一下就好，之后就能试听和预览了。
+        </p>
+        <div className="mt-6">
+          <span
+            className={`inline-block px-6 py-3 rounded-full text-lg font-semibold transition-all ${
+              loading
+                ? "bg-gray-700 text-gray-400"
+                : "bg-cyan-500 text-white animate-pulse"
+            }`}
+          >
+            {loading ? "⏳ 正在初始化..." : "👆 点击这里"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 主页面
+// ============================================================
+
 export default function StudioPage() {
   const [activeColor, setActiveColor] = useState(COLORS[0].slug);
   const [sound, setSound] = useState<SoundParams>(makeDefaultSound);
@@ -442,9 +514,9 @@ export default function StudioPage() {
   const [savedMsg, setSavedMsg] = useState("");
   const [mounted, setMounted] = useState(false);
   const [mobileTab, setMobileTab] = useState<"sound" | "vibe">("sound");
-  const toneRef = useRef<any>(null);
+  const [audioReady, setAudioReady] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { setMounted(true); preloadTone(); }, []);
 
   const colorInfo = COLORS.find((c) => c.slug === activeColor)!;
 
@@ -497,9 +569,9 @@ export default function StudioPage() {
     if (playing) return;
     setPlaying(true);
     try {
-      if (!toneRef.current) toneRef.current = await import("tone");
-      const Tone = toneRef.current;
-      await Tone.start();
+      if (!toneModule) await preloadTone();
+      const Tone = toneModule;
+      if (!toneReady) { await Tone.start(); toneReady = true; }
 
       const final = applyIntuition({ ...sound });
       const vol = new Tone.Volume(-6).toDestination();
@@ -524,10 +596,14 @@ export default function StudioPage() {
   const exportJson = () => { const json = exportAll(); const blob = new Blob([json], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "synesthesia-presets.json"; a.click(); URL.revokeObjectURL(a.href); setSavedMsg("JSON 已下载"); setTimeout(() => setSavedMsg(""), 1500); };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-200">
-      <header className="border-b border-gray-800 px-2 md:px-4 py-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 shrink-0">
-          <h1 className="text-sm md:text-base font-bold text-cyan-400">🎛 Studio</h1>
+    <>
+      {/* 移动端音频引导覆盖层 */}
+      {!audioReady && <AudioGate onReady={() => setAudioReady(true)} />}
+
+      <div className="min-h-screen bg-gray-950 text-gray-200">
+        <header className="border-b border-gray-800 px-2 md:px-4 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <h1 className="text-sm md:text-base font-bold text-cyan-400">🎛 Studio</h1>
           {savedMsg && <span className="text-xs text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded hidden md:inline">{savedMsg}</span>}
         </div>
         <div className="flex items-center gap-1">
@@ -597,5 +673,6 @@ export default function StudioPage() {
         </button>
       </div>
     </div>
+    </>
   );
 }

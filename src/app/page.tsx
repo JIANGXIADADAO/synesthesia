@@ -6,6 +6,23 @@ import { STATIC_DATA, addLocalAnswer, getLocalAnswers, toggleLocalVote, getLocal
 import type * as ToneType from "tone";
 
 // ============================================================
+// Tone.js 预加载（模块级，页面加载即开始导入）
+// ============================================================
+let toneModule: any = null;
+let toneLoadPromise: Promise<any> | null = null;
+let toneReady = false;
+
+function preloadTone() {
+  if (!toneLoadPromise) {
+    toneLoadPromise = import("tone").then((m) => {
+      toneModule = m;
+      return m;
+    });
+  }
+  return toneLoadPromise;
+}
+
+// ============================================================
 // 类型
 // ============================================================
 
@@ -59,21 +76,22 @@ function getVoterId(): string {
 
 function useSoundscape() {
   const playingRef = useRef(false);
-  const toneRef = useRef<any>(null);
 
   const play = useCallback(async (params: SensoryData["soundscape"]) => {
     if (playingRef.current) return;
     playingRef.current = true;
 
     try {
-      // 懒加载 Tone.js
-      if (!toneRef.current) {
-        toneRef.current = await import("tone");
-      }
-      const Tone = toneRef.current;
+      // 使用预加载的 Tone 模块（页面加载时已开始 import）
+      if (!toneModule) await preloadTone();
+      const Tone = toneModule;
 
-      await Tone.start();
-      console.log("🎵 Tone.js started, playing:", params.notes, params.synthType);
+      // 如果 AudioGate 还没触发，补调 start（桌面端场景）
+      if (!toneReady) {
+        await Tone.start();
+        toneReady = true;
+      }
+      console.log("🎵 Playing:", params.notes, params.synthType);
 
       const vol = new Tone.Volume(-6).toDestination();
 
@@ -197,6 +215,94 @@ function ColorCard({
 }
 
 // ============================================================
+// 子组件：音频引导覆盖层（移动端 AudioContext 必须在用户手势中启动）
+// ============================================================
+
+function AudioGate({
+  onReady,
+  hasVibration,
+}: {
+  onReady: () => void;
+  hasVibration: boolean;
+}) {
+  const [loading, setLoading] = useState(false);
+  const isIOS =
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  const handleTap = async () => {
+    setLoading(true);
+    try {
+      // 在用户手势回调中同步启动 AudioContext
+      if (!toneModule) await preloadTone();
+      await toneModule.start();
+      toneReady = true;
+      onReady();
+    } catch (e) {
+      console.error("AudioGate init failed:", e);
+      // 即使失败也放行，让后续 play() 重试
+      onReady();
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div
+      onClick={handleTap}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-950/95 backdrop-blur-sm cursor-pointer"
+    >
+      <div className="text-center px-6 max-w-sm">
+        {/* 大图标 */}
+        <div className="text-6xl mb-6 animate-bounce">🎧</div>
+        <h2 className="text-2xl font-bold text-amber-400 mb-3">
+          点击任意位置开始
+        </h2>
+        <p className="text-purple-200/70 leading-relaxed mb-4">
+          你的浏览器需要一次点击来激活声音。
+          <br />
+          点一下就好，之后就能感受颜色了。
+        </p>
+
+        {/* 设备兼容信息 */}
+        <div className="text-xs text-purple-300/40 space-y-1">
+          {isIOS && (
+            <p>
+              🍎 iOS 设备：请确认侧边静音开关已关闭，音量已调高
+            </p>
+          )}
+          {!hasVibration && (
+            <p>
+              {isIOS
+                ? "📳 iOS 不支持振动，将使用视觉脉动代替"
+                : "💻 桌面端使用视觉脉动代替振动"}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-6">
+          <span
+            className={`inline-block px-6 py-3 rounded-full text-lg font-semibold transition-all ${
+              loading
+                ? "bg-gray-700 text-gray-400"
+                : "bg-amber-400 text-gray-900 animate-pulse"
+            }`}
+          >
+            {loading ? "⏳ 正在初始化..." : "👆 点击这里"}
+          </span>
+        </div>
+
+        {/* 无障碍：关闭静音开关提示（iOS） */}
+        {isIOS && (
+          <p className="mt-4 text-xs text-amber-400/50">
+            💡 如果之后还是没声音，请关闭 iPhone 左侧的静音开关再试
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // 主页面
 // ============================================================
 
@@ -205,11 +311,12 @@ export default function Home() {
   const [selected, setSelected] = useState<ColorWithAnswers | null>(null);
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
   const [searchText, setSearchText] = useState("");
   const { play } = useSoundscape();
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  // 加载颜色列表（静态数据）
+  // 加载颜色列表（静态数据）+ 预加载 Tone.js
   useEffect(() => {
     setColors(
       STATIC_DATA.colors.map((c) => ({
@@ -219,6 +326,8 @@ export default function Home() {
         consensusScore: c.consensusScore,
       }))
     );
+    // 后台预加载 Tone.js 模块，不等它完成
+    preloadTone();
   }, []);
 
   // 选中颜色 → 加载详情（静态数据 + localStorage）
@@ -282,9 +391,12 @@ export default function Home() {
     recognitionRef.current = recognition;
   }, [colors]);
 
-  // 视觉振动反馈（桌面端降级）
+  // 振动支持检测
   const [visualVibe, setVisualVibe] = useState(false);
   const hasVibration = typeof navigator !== "undefined" && !!navigator.vibrate;
+  const isIOS =
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   // 感受这个颜色
   const feelColor = (sensory: SensoryData) => {
@@ -330,9 +442,18 @@ export default function Home() {
   };
 
   return (
-    <main id="main-content" className="min-h-screen pb-20">
-      {/* Header */}
-      <header className="px-6 py-8 text-center relative">
+    <>
+      {/* 移动端音频引导覆盖层：在用户手势中同步启动 AudioContext */}
+      {!audioReady && (
+        <AudioGate
+          onReady={() => setAudioReady(true)}
+          hasVibration={hasVibration}
+        />
+      )}
+
+      <main id="main-content" className="min-h-screen pb-20">
+        {/* Header */}
+        <header className="px-6 py-8 text-center relative">
         <a href="/studio" className="absolute top-4 right-4 px-3 py-1.5 text-xs rounded-full bg-purple-800/30 border border-purple-700/30 text-purple-300 hover:bg-purple-700/50 hover:text-purple-100 transition-colors" title="声音设计工具">
           🎛 Studio
         </a>
@@ -441,6 +562,8 @@ export default function Home() {
               <p className="mt-2 text-xs text-purple-300/50">
                 {hasVibration
                   ? `📳 振动模式: ${selected.sensory.vibration.label} · 手机振动 + 音景`
+                  : isIOS
+                  ? `👁 振动模式: ${selected.sensory.vibration.label} · iOS 不支持振动，用视觉脉动代替`
                   : `💻 振动模式: ${selected.sensory.vibration.label} · 桌面端用视觉脉动代替 + 音景`}
               </p>
               {visualVibe && !hasVibration && (
@@ -558,6 +681,7 @@ export default function Home() {
         <p>不是要代替光，是用剩下的所有感官，把光重构一遍。</p>
       </footer>
     </main>
+    </>
   );
 }
 
