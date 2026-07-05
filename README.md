@@ -4,7 +4,7 @@
 
 **跨感官色彩翻译平台** — 盲人语音问颜色，社区用触觉、听觉、温度回答。投票汇聚共识，共识编译为振动和音景。
 
-🌐 **[synesthesia-jiangxia.netlify.app](https://synesthesia-jiangxia.netlify.app/)**
+🌐 **[synesthesia-three.vercel.app](https://synesthesia-three.vercel.app/)**
 
 ---
 
@@ -38,8 +38,8 @@ npm run dev
 - **振动**: Navigator.vibrate()（手机端）/ 视觉脉动降级（桌面端）
 - **语音**: Web Speech API
 - **数据库**: Node.js 内置 SQLite（开发环境）/ 静态数据导出（生产环境）
-- **部署**: Netlify 静态导出
+- **部署**: Vercel 静态导出
 
 ## 部署
 
-拖文件夹到 Netlify，自动构建部署。无需数据库、无需 API、无需配置。
+Vercel 静态导出：`vercel --prod` 或连接 GitHub 自动部署。
